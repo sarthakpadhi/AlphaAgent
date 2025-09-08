@@ -9,7 +9,7 @@ import numpy as np
 
 
 llm = LLM(
-    model="openai/gpt-4o", # call model by provider/model_name
+    model="openai/gpt-5-mini", # call model by provider/model_name
     stop=["END"],
     seed=42
 ) # type: ignore
@@ -46,7 +46,7 @@ stakeholders"""
 
 def get_tavily_search(stock = "reliance"):
     tavily_client = TavilyClient(api_key="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")
-    response = tavily_client.search("reliance news", topic="finance", search_depth="advanced", country="india", include_raw_content="markdown")
+    response = tavily_client.search("reliance news", max_results=3, topic="finance", search_depth="advanced", country="india", include_raw_content="markdown")
     return response['results']
 
 
@@ -145,9 +145,9 @@ moderator = Agent(
 
 investment_debate_task = Task(
     description=(
-        "use all the context available to you to moderate a debate between three investment analysts: "
+        "use all the context available to you to moderate a debate between 2 investment agents "
         "Start a structured debate between the three investment analysts. "
-        "Each analyst should independently propose whether the stock should be a BUY, SELL, or HOLD. "
+        "Each agent should independently propose whether the stock should be a BUY, SELL, or HOLD. "
         "They must defend their recommendation with reasoning, challenge opposing recommendations, "
         "and respond to critiques. Ensure each analyst has at least 2 turns to speak. "
         "The goal is for the analysts to debate the merits of each position and work toward a consensus "
