@@ -6,7 +6,7 @@ from crewai.tools import tool # type: ignore
 from enum import Enum
 import pandas as pd
 import numpy as np
-
+from openai import OpenAI
 
 llm = LLM(
     model="openai/gpt-5-mini", # call model by provider/model_name
@@ -90,6 +90,28 @@ def getAnnualisedReturnTool(*args, **kwargs) -> float:
     annualised_return = (1 + cummulative_return) ** (252 / len(df)) - 1
     return annualised_return
 
+@tool
+def fundamental_analysis_tool():
+    '''
+        Tool to analyze the financial report of a company and provide a summary
+    '''
+
+    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+    with open("INDAS_117298_1348254_16012025082021 (2).xml", "r", encoding="utf-8") as f:
+        xml_content = f.read()
+
+
+    response = client.chat.completions.create(
+        model="gpt-5-nano",  
+        messages=[
+            {"role": "system", "content": "You are a financial analyst. You have to provide correct answers. IF you dont know the answer, you must say you dont know. "},
+            {"role": "user", "content": f"Here is an XML file:\n{xml_content}\n\nSummarize the financial results. Dont ask for anything other prompt"}
+        ],
+    )
+    return response.choices[0].message.content
+
+
 
 
 
@@ -116,6 +138,26 @@ sentimentAgent = Agent(
     allow_delegation=False,
     llm=llm
 ) # type: ignore
+
+
+
+fundamentalAgent = Agent(
+    role="fundamentalAgent",
+    goal=AgentPrompts.fundamentalAgentGoal.value,
+    backstory=AgentPrompts.fundamentalAgentBackStory.value,
+    tools=[fundamental_analysis_tool],
+    verbose=True,
+    memory=True,
+    llm=llm
+)
+
+
+fundamental_task = Task(
+   description="Analyze the company's 10K report using the fundamental analysis tool. Extract key financial information by querying the tool with specific questions about revenue trends, profitability metrics, debt levels, cash flow statements, segment performance, and risk factors. Use natural language queries to interact with the tool and gather comprehensive data from the XML document. Ensure you retrieve all necessary financial data points before formulating your investment recommendation.",
+   expected_output="A comprehensive fundamental analysis report including: 1) Key financial metrics extracted from the 10K (revenue, net income, EPS, debt-to-equity ratio), 2) Year-over-year growth trends and financial performance analysis, 3) Segment-wise business performance breakdown, 4) Critical risk factors and their potential impact, 5) Cash flow analysis and liquidity position, 6) Final BUY/SELL/HOLD recommendation supported by specific data points from the 10K report.",
+   agent=fundamentalAgent,
+)
+
 
 valuation_task = Task(
    description="Analyze Reliance stock's historical performance by calculating annualized returns and volatility. Use both metrics to assess risk-adjusted performance and provide a clear BUY, SELL, or HOLD recommendation with detailed reasoning.",
@@ -190,8 +232,8 @@ investment_conclusion_task = Task(
 
 
 crew = Crew(
-    agents=[valuationAgent, sentimentAgent, moderator, conclusion_agent],
-    tasks=[ valuation_task,sentiment_task,investment_debate_task, investment_conclusion_task],
+    agents=[valuationAgent, sentimentAgent,fundamentalAgent, moderator, conclusion_agent],
+    tasks=[ valuation_task,sentiment_task,fundamental_task,investment_debate_task, investment_conclusion_task],
     process=Process.sequential,
 ) # type: ignore
 
