@@ -134,7 +134,7 @@ moderator = Agent(
     role="Investment Moderator",
     goal="Keep the investment debate structured, ask for responses, and finally give a concluding investment decision.",
     backstory="You are a neutral and fair investment debate moderator with deep market experience. "
-              "You ensure that each analyst has the chance to present their case and that the debate remains productive. Each analyst should provide with thier opinion on what the strategby should be and all of them must come toa final consensus that they agree on. ",
+              "You ensure that each Agent has the chance to present their case and that the debate remains productive. Each agent should provide with thier opinion on what the strategby should be and all of them must come toa final consensus that they agree on. ",
     verbose=True,
     allow_delegation=True,
     memory=True,  # type: ignore
@@ -145,7 +145,7 @@ moderator = Agent(
 
 investment_debate_task = Task(
     description=(
-        "use all the context available to you to moderate a debate between 2 investment agents "
+        "use all the context available to you to moderate a debate between 2 investment agents given to you Sentiment Agent and Valuation Agent. "
         "Start a structured debate between the three investment analysts. "
         "Each agent should independently propose whether the stock should be a BUY, SELL, or HOLD. "
         "They must defend their recommendation with reasoning, challenge opposing recommendations, "
@@ -161,24 +161,37 @@ investment_debate_task = Task(
     agent=moderator,  # Moderator orchestrates the discussion
 ) # type: ignore
 
-# investment_conclusion_task = Task(
-#     description=(
-#         "After the debate, analyze the discussion carefully and provide a final investment decision. "
-#         "The conclusion should summarize key arguments and declare the final recommendation: BUY, SELL, or HOLD "
-#         "with proper reasoning based on the strongest arguments presented."
-#     ),
-#     expected_output=(
-#         "A clear and reasoned final investment decision (BUY/SELL/HOLD) summarizing the debate "
-#         "and identifying which analytical approach provided the most compelling case."
-#     ),
-#     agent=moderator,
-# ) # type: ignore
+
+conclusion_agent = Agent(
+    role="Conclusion Agent",
+    goal="You are to provide a final investment decision based on the debate moderated by the Investment Moderator.",
+    backstory="You are a neutral and fair investment Analyst with deep market experience. "
+              "After the debate, analyze the discussion carefully and provide a final investment decision. ",
+    verbose=True,
+    allow_delegation=False,
+    memory=True,  # type: ignore
+    llm=llm
+) # type: ignore
+
+investment_conclusion_task = Task(
+    description=(
+        "After the debate, analyze the discussion carefully and provide a final investment decision. "
+        "The conclusion should summarize key arguments and declare the final recommendation: BUY, SELL, or HOLD "
+        "with proper reasoning based on the strongest arguments presented."
+    ),
+    expected_output=(
+        "A clear and reasoned final investment decision (BUY/SELL/HOLD) summarizing the debate "
+        "and identifying which analytical approach provided the most compelling case."
+    ),
+    context=[investment_debate_task],
+    agent=conclusion_agent,
+) # type: ignore
 
 
 
 crew = Crew(
-    agents=[valuationAgent, sentimentAgent, moderator, ],
-    tasks=[ valuation_task,sentiment_task,investment_debate_task],
+    agents=[valuationAgent, sentimentAgent, moderator, conclusion_agent],
+    tasks=[ valuation_task,sentiment_task,investment_debate_task, investment_conclusion_task],
     process=Process.sequential,
 ) # type: ignore
 
