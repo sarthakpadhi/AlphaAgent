@@ -87,10 +87,8 @@ def getAnnualisedReturnTool() -> float:
 def fundamental_analysis_tool():
     """Tool to analyze the financial report of a company and provide a summary"""
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-    with open(
-        "assets/INDAS_117298_1348254_16012025082021 (2).xml", "r", encoding="utf-8"
-    ) as f:
-        xml_content = f.read()
+    dat = yf.Ticker(f"{InvestmentCrew.stock}.NS")
+    balance_sheet_data = dat.balance_sheet
 
     response = client.chat.completions.create(
         model="gpt-5-nano",
@@ -101,7 +99,7 @@ def fundamental_analysis_tool():
             },
             {
                 "role": "user",
-                "content": f"Here is an XML file:\n{xml_content}\n\nSummarize the financial results. Don't ask for anything else.",
+                "content": f"Here is an Pandas Dataframe:\n{balance_sheet_data}\n\nSummarize the financial results in INR. Don't ask for anything else.",
             },
         ],
     )
