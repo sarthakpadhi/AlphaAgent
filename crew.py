@@ -211,7 +211,7 @@ class InvestmentCrew:
             config=self.agents_config["valuation_analyst"],
             tools=[getAnnualisedVolatilityTool, getAnnualisedReturnTool],
             llm=self.llm,
-        )
+        ) # type: ignore
 
     @agent
     def sentiment_analyst(self) -> Agent:
@@ -219,6 +219,7 @@ class InvestmentCrew:
             config=self.agents_config["sentiment_analyst"],
             tools=[getNewsBodyTool],
             llm=self.llm,
+        ) # type: ignore
         ) # type: ignore
 
     @agent
