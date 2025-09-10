@@ -1,6 +1,8 @@
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import tool
+from crewai_tools import PDFSearchTool
+
 from tavily import TavilyClient
 from openai import OpenAI
 import pandas as pd
@@ -87,6 +89,8 @@ def fundamental_analysis_tool():
     return response.choices[0].message.content
 
 
+RAGtool = PDFSearchTool(pdf='assets/25042025_Media_Release_RIL_Q4_FY2024_25_Financial_and_Operational_Performance.pdf')
+
 # ------------------------
 # CrewBase Class
 # ------------------------
@@ -104,7 +108,7 @@ class InvestmentCrew:
     def fundamental_analyst(self) -> Agent:
         return Agent(
             config=self.agents_config["fundamental_analyst"],
-            tools=[fundamental_analysis_tool],
+            tools=[RAGtool],
             llm=self.llm,
         )
 
