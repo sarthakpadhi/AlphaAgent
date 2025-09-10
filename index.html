@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaAgent - BlackRock's AI Trading System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #222222;
+            --border-color: #333333;
+            --accent-blue: #4a9eff;
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-dim: #606060;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-secondary: linear-gradient(135deg, #4a9eff 0%, #8b5cf6 100%);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Subtle animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(74, 158, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 50% 20%, rgba(236, 72, 153, 0.03) 0%, transparent 50%);
+            z-index: -1;
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--gradient-secondary);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 10px 30px rgba(74, 158, 255, 0.2);
+            animation: subtle-float 6s ease-in-out infinite;
+        }
+
+        @keyframes subtle-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: var(--gradient-secondary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+
+        .main-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .input-section {
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
+        }
+
+        .helper-text {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .stock-input-wrapper {
+            position: relative;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 2.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-dim);
+        }
+
+        .stock-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--accent-blue);
+            font-size: 1.125rem;
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1.25rem;
+            background: var(--bg-card);
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .file-upload-label:hover {
+            border-color: var(--accent-purple);
+            background: rgba(139, 92, 246, 0.05);
+            color: var(--accent-purple);
+        }
+
+        .file-upload.has-file .file-upload-label {
+            border-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.05);
+            color: var(--accent-green);
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--gradient-secondary);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.02em;
+            box-shadow: 0 10px 30px rgba(74, 158, 255, 0.3);
+        }
+
+        .analyze-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(74, 158, 255, 0.4);
+        }
+
+        .analyze-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .progress-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            display: none;
+        }
+
+        .progress-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .progress-header {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--accent-orange);
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-container {
+            background: var(--bg-primary);
+            border-radius: 6px;
+            height: 8px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--gradient-secondary);
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-message {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .results-section {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .results-header {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .result-card:hover {
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .result-card h3 {
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .result-content {
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        .recent-analyses {
+            margin-top: 3rem;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .recent-analyses h2 {
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .recent-list {
+            list-style: none;
+        }
+
+        .recent-item {
+            padding: 1rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .recent-item:hover {
+            border-color: var(--border-color);
+            transform: translateX(5px);
+        }
+
+        .recent-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .recent-ticker {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .recent-date {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-completed {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+        }
+
+        .status-processing {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-orange);
+        }
+
+        .status-failed {
+            background: rgba(236, 72, 153, 0.15);
+            color: var(--accent-pink);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .spinner {
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--accent-blue);
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--accent-green);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--accent-pink);
+        }
+
+        .toast.info {
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .main-card {
+                padding: 1.5rem;
+            }
+
+            .toast {
+                left: 1rem;
+                right: 1rem;
+                bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <span>📈</span>
+                </div>
+                <h1>AlphaAgent</h1>
+            </div>
+            <p class="subtitle">Implementation of BlackRock's AlphaAgent Paper</p>
+        </div>
+
+        <div class="main-card">
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="stockInput">Stock Ticker Symbol</label>
+                    <div class="stock-input-wrapper">
+                        <span class="stock-icon">📊</span>
+                        <input 
+                            type="text" 
+                            id="stockInput" 
+                            placeholder="e.g., RELIANCE.NS, AAPL, GOOGL"
+                            autocomplete="off"
+                        >
+                    </div>
+                    <p class="helper-text">Enter the stock symbol you want to analyze</p>
+                </div>
+
+                <div class="input-group">
+                    <label for="fileInput">Upload Financial Document (Optional)</label>
+                    <div class="file-upload" id="fileUploadWrapper">
+                        <input type="file" id="fileInput" accept=".pdf,.docx,.txt">
+                        <label for="fileInput" class="file-upload-label">
+                            <span>📁</span>
+                            <span id="fileLabel">Drop files here or click to upload</span>
+                        </label>
+                    </div>
+                    <p class="helper-text">Supported formats: PDF, DOCX, TXT</p>
+                </div>
+
+                <button class="analyze-btn" id="analyzeBtn">
+                    Start Analysis
+                </button>
+            </div>
+
+            <div class="progress-section" id="progressSection">
+                <h3 class="progress-header">Analysis in Progress</h3>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+                <div class="progress-message" id="progressMessage">
+                    <span class="spinner"></span>
+                    <span id="progressText">Initializing analysis...</span>
+                </div>
+            </div>
+
+            <div class="results-section" id="resultsSection">
+                <h2 class="results-header">Analysis Results</h2>
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+
+        <div class="recent-analyses" id="recentAnalyses" style="display: none;">
+            <h2>Recent Analyses</h2>
+            <ul class="recent-list" id="recentList"></ul>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        
+        let currentJobId = null;
+        let eventSource = null;
+
+        // DOM elements
+        const stockInput = document.getElementById('stockInput');
+        const fileInput = document.getElementById('fileInput');
+        const fileLabel = document.getElementById('fileLabel');
+        const fileUploadWrapper = document.getElementById('fileUploadWrapper');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const progressSection = document.getElementById('progressSection');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsContent = document.getElementById('resultsContent');
+        const recentAnalyses = document.getElementById('recentAnalyses');
+        const recentList = document.getElementById('recentList');
+        const toast = document.getElementById('toast');
+
+        // File upload handling
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileLabel.textContent = `📄 ${file.name}`;
+                fileUploadWrapper.classList.add('has-file');
+            } else {
+                fileLabel.textContent = 'Drop files here or click to upload';
+                fileUploadWrapper.classList.remove('has-file');
+            }
+        });
+
+        // Drag and drop
+        const fileUploadLabel = fileUploadWrapper.querySelector('.file-upload-label');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileUploadLabel.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileUploadLabel.addEventListener(eventName, () => {
+                fileUploadLabel.style.borderColor = 'var(--accent-purple)';
+                fileUploadLabel.style.background = 'rgba(139, 92, 246, 0.05)';
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileUploadLabel.addEventListener(eventName, () => {
+                fileUploadLabel.style.borderColor = '';
+                fileUploadLabel.style.background = '';
+            }, false);
+        });
+
+        fileUploadLabel.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                fileInput.files = files;
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            }
+        });
+
+        // Toast notification
+        function showNotification(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Analyze button click
+        analyzeBtn.addEventListener('click', async () => {
+            const stockTicker = stockInput.value.trim();
+            
+            if (!stockTicker) {
+                showNotification('Please enter a stock ticker symbol', 'error');
+                stockInput.focus();
+                return;
+            }
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Processing...';
+            progressSection.classList.add('active');
+            resultsSection.classList.remove('active');
+            progressBar.style.width = '0%';
+
+            try {
+                // Upload document if selected
+                let includeUploadedDocs = false;
+                if (fileInput.files[0]) {
+                    progressText.textContent = 'Uploading document...';
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+                    
+                    const uploadResponse = await fetch(`${API_URL}/api/upload-document`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (uploadResponse.ok) {
+                        includeUploadedDocs = true;
+                        showNotification('Document uploaded successfully', 'success');
+                    } else {
+                        const error = await uploadResponse.json();
+                        showNotification(`Upload failed: ${error.detail}`, 'error');
+                    }
+                }
+
+                // Start analysis
+                progressText.textContent = 'Starting analysis...';
+                const response = await fetch(`${API_URL}/api/analyze-stock`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        stock_ticker: stockTicker,
+                        include_uploaded_docs: includeUploadedDocs
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                currentJobId = data.job_id;
+
+                // Start monitoring progress
+                monitorProgress(currentJobId);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to start analysis. Please try again.', 'error');
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'Start Analysis';
+                progressSection.classList.remove('active');
+            }
+        });
+
+        // Monitor analysis progress
+        async function monitorProgress(jobId) {
+            // Close existing connection if any
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // Use Server-Sent Events for real-time updates
+            eventSource = new EventSource(`${API_URL}/api/analysis-stream/${jobId}`);
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    eventSource.close();
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.textContent = 'Start Analysis';
+                    progressSection.classList.remove('active');
+                    showNotification('Analysis failed', 'error');
+                    return;
+                }
+
+                // Update progress bar and message
+                progressBar.style.width = `${data.progress}%`;
+                progressText.textContent = data.message;
+
+                // Handle completion
+                if (data.status === 'completed') {
+                    eventSource.close();
+                    displayResults(data.result);
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.textContent = 'Start Analysis';
+                    progressSection.classList.remove('active');
+                    loadRecentAnalyses();
+                    showNotification('Analysis completed successfully', 'success');
+                } else if (data.status === 'failed') {
+                    eventSource.close();
+                    showNotification(`Analysis failed: ${data.error}`, 'error');
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.textContent = 'Start Analysis';
+                    progressSection.classList.remove('active');
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('EventSource error:', error);
+                eventSource.close();
+                
+                // Fallback to polling
+                pollStatus(jobId);
+            };
+        }
+
+        // Fallback polling method
+        async function pollStatus(jobId) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_URL}/api/analysis-status/${jobId}`);
+                    const data = await response.json();
+                    
+                    progressBar.style.width = `${data.progress}%`;
+                    progressText.textContent = data.message;
+
+                    if (data.status === 'completed') {
+                        clearInterval(interval);
+                        displayResults(data.result);
+                        analyzeBtn.disabled = false;
+                        analyzeBtn.textContent = 'Start Analysis';
+                        progressSection.classList.remove('active');
+                        loadRecentAnalyses();
+                        showNotification('Analysis completed successfully', 'success');
+                    } else if (data.status === 'failed') {
+                        clearInterval(interval);
+                        showNotification(`Analysis failed: ${data.error}`, 'error');
+                        analyzeBtn.disabled = false;
+                        analyzeBtn.textContent = 'Start Analysis';
+                        progressSection.classList.remove('active');
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                    clearInterval(interval);
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.textContent = 'Start Analysis';
+                    progressSection.classList.remove('active');
+                }
+            }, 1000);
+        }
+
+        // Display results
+        function displayResults(result) {
+            resultsSection.classList.add('active');
+            
+            if (!result) {
+                resultsContent.innerHTML = '<p>No results available</p>';
+                return;
+            }
+
+            let html = '';
+            
+            // Display summary
+            if (result.summary) {
+                html += `
+                    <div class="result-card">
+                        <h3>Executive Summary</h3>
+                        <div class="result-content">${formatText(result.summary)}</div>
+                    </div>
+                `;
+            }
+
+            // Display sections
+            if (result.sections) {
+                for (const [key, value] of Object.entries(result.sections)) {
+                    const title = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    html += `
+                        <div class="result-card">
+                            <h3>${title}</h3>
+                            <div class="result-content">${formatText(value)}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            resultsContent.innerHTML = html;
+        }
+
+        // Format text for display
+        function formatText(text) {
+            return text
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>');
+        }
+
+        // Load recent analyses
+        async function loadRecentAnalyses() {
+            try {
+                const response = await fetch(`${API_URL}/api/recent-analyses`);
+                const analyses = await response.json();
+                
+                if (analyses.length > 0) {
+                    recentAnalyses.style.display = 'block';
+                    
+                    let html = '';
+                    analyses.forEach(analysis => {
+                        const date = new Date(analysis.created_at).toLocaleString();
+                        const statusClass = `status-${analysis.status}`;
+                        
+                        html += `
+                            <li class="recent-item">
+                                <div class="recent-item-info">
+                                    <span class="recent-ticker">${analysis.stock_ticker || 'N/A'}</span>
+                                    <span class="recent-date">${date}</span>
+                                </div>
+                                <span class="status-badge ${statusClass}">${analysis.status}</span>
+                            </li>
+                        `;
+                    });
+                    
+                    recentList.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Failed to load recent analyses:', error);
+            }
+        }
+
+        // Load recent analyses on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadRecentAnalyses();
+        });
+
+        // Auto-focus on stock input
+        stockInput.focus();
+    </script>
+</body>
+</html>
