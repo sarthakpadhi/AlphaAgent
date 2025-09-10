@@ -67,7 +67,7 @@ def fundamental_analysis_tool():
     """Tool to analyze the financial report of a company and provide a summary"""
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     with open(
-        "INDAS_117298_1348254_16012025082021 (2).xml", "r", encoding="utf-8"
+        "assets/INDAS_117298_1348254_16012025082021 (2).xml", "r", encoding="utf-8"
     ) as f:
         xml_content = f.read()
 
@@ -153,11 +153,9 @@ class InvestmentCrew:
     def investment_conclusion_task(self) -> Task:
         return Task(config=self.tasks_config["investment_conclusion_task"])
 
-    # -------- Crew --------
     @crew
     def crew(self) -> Crew:
         """Creates the full investment crew"""
-        import pdb; pdb.set_trace()
         return Crew(
             agents=self.agents,
             tasks=self.tasks,

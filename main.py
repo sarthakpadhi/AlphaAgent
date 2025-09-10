@@ -1,28 +1,22 @@
-from crewai import Agent, Crew, Process, LLM, Task
-from crewai.project import CrewBase, agent, crew, task  # type: ignore
-from tavily import TavilyClient
-import os
-from crewai.tools import tool  # type: ignore
-from enum import Enum
-import pandas as pd
-import numpy as np
-from openai import OpenAI
-from prompts import AgentPrompts
-from agents import ValuationAgent, SentimentAgent, FundamentalAgent
+import sys
+import warnings
 
+from crew import InvestmentCrew
 
-def analyseStock(llm: LLM) -> str:
-    agentClasses = [ValuationAgent, SentimentAgent, FundamentalAgent]
-    agentsList = [cls(llm).get_agent_instance() for cls in agentClasses]
-    ##createCrew
-    ##finalReturnResponse
-    pass
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
+# This main file is intended to be a way for you to run your
+# crew locally, so refrain from adding unnecessary logic into this file.
+# Replace with inputs you want to test with, it will automatically
+# interpolate any tasks and agents information
 
-def main():
-    llm = LLM(model="openai/gpt-5-mini", stop=["END"], seed=42)
-    analyseStock(llm)
+def run():
+    """
+    Run the crew.
+    """
+    inputs = {
+        'topic': 'AI LLMs'
+    }
+    InvestmentCrew().crew().kickoff(inputs=inputs)
 
-
-if __name__ == "__main__":
-    main()
+run()
