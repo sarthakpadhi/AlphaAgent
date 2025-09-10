@@ -6,10 +6,12 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "crewai>=0.177.0",
+    "fastapi>=0.116.1",
     "langchain>=0.3.27",
     "langchain-community>=0.3.29",
     "langchain-experimental>=0.3.4",
     "langchain-openai>=0.3.33",
     "pypdf>=6.0.0",
+    "streamlit>=1.49.1",
     "yfinance>=0.2.65",
 ]
