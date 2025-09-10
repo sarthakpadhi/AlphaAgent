@@ -6,20 +6,22 @@ from openai import OpenAI
 import pandas as pd
 import numpy as np
 import os
-
+import yfinance as yf
 
 # ------------------------
 # LLMs
 llm = LLM(model="openai/gpt-5-mini", stop=["END"], seed=42)
 
 
+
+
 # ------------------------
 # Tools
 # ------------------------
-def get_tavily_search(stock="reliance"):
+def get_tavily_search():
     tavily_client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
     response = tavily_client.search(
-        f"{stock} news",
+        f"{InvestmentCrew.stock} news",
         max_results=3,
         topic="finance",
         search_depth="advanced",
@@ -30,9 +32,14 @@ def get_tavily_search(stock="reliance"):
 
 
 @tool
-def getNewsBodyTool(*args, **kwargs) -> list:
-    """Get the news body for a company"""
-    news_list = get_tavily_search("reliance")
+def getNewsBodyTool() -> list:
+
+    """
+    Get the news body for a company
+    args:
+        stocks (str): Stock ticker
+    """
+    news_list = get_tavily_search(InvestmentCrew.stock)
     final_news_content = []
     for news in news_list:
         if news["score"] > 0.6:
@@ -41,22 +48,34 @@ def getNewsBodyTool(*args, **kwargs) -> list:
 
 
 @tool
-def getAnnualisedVolatilityTool(*args, **kwargs) -> str:
-    """Get the annualised volatility for a company"""
-    df = pd.read_csv("assets/Quote-Equity-RELIANCE-EQ-08-09-2024-to-08-09-2025.csv")
-    df["close "] = df["close "].str.replace(",", "").astype(float)
-    log_returns = np.log(df["close "] / df["close "].shift(1))
+def getAnnualisedVolatilityTool() -> str:
+
+    """
+    Get the annualised volatility for a company
+    Args:
+        stock (str): Stock ticker 
+    """
+    # df = pd.read_csv("assets/Quote-Equity-RELIANCE-EQ-08-09-2024-to-08-09-2025.csv")
+    dat = yf.Ticker(f"{InvestmentCrew.stock}.NS")
+    df = dat.history(period="3mo")
+    log_returns = np.log(df["Close"] / df["Close "].shift(1))
     volatility = log_returns.std() * (252**0.5)
     return volatility
 
 
 @tool
-def getAnnualisedReturnTool(*args, **kwargs) -> float:
-    """Get the annualised return for a company"""
-    df = pd.read_csv("assets/Quote-Equity-RELIANCE-EQ-08-09-2024-to-08-09-2025.csv")
+def getAnnualisedReturnTool() -> float:
+
+    """
+    Get the annualised return for a company
+    Args:
+        stock (str): Stock ticker
+    """
+    dat = yf.Ticker(f"{InvestmentCrew.stock}.NS")
+    df = dat.history(period="3mo")
     cummulative_return = (
-        float(df["close "].iloc[-1].replace(",", ""))
-        / float(df["close "].iloc[0].replace(",", ""))
+        float(df["close "].iloc[-1])
+        / float(df["close "].iloc[0])
     ) - 1
     annualised_return = (1 + cummulative_return) ** (252 / len(df)) - 1
     return annualised_return
@@ -92,12 +111,15 @@ def fundamental_analysis_tool():
 # ------------------------
 @CrewBase
 class InvestmentCrew:
+
     """Investment Crew for Stock Analysis & Debate"""
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
+    stock ="RELIANCE"  # default stock
 
     llm = llm
+    
 
     # -------- Agents --------
     @agent
@@ -114,7 +136,7 @@ class InvestmentCrew:
             config=self.agents_config["valuation_analyst"],
             tools=[getAnnualisedVolatilityTool, getAnnualisedReturnTool],
             llm=self.llm,
-        )
+        ) # type: ignore
 
     @agent
     def sentiment_analyst(self) -> Agent:
@@ -122,42 +144,42 @@ class InvestmentCrew:
             config=self.agents_config["sentiment_analyst"],
             tools=[getNewsBodyTool],
             llm=self.llm,
-        )
+        ) # type: ignore
 
     @agent
     def moderator(self) -> Agent:
-        return Agent(config=self.agents_config["moderator"], llm=self.llm)
+        return Agent(config=self.agents_config["moderator"], llm=self.llm) # type: ignore
 
     @agent
     def conclusion_agent(self) -> Agent:
-        return Agent(config=self.agents_config["conclusion_agent"], llm=self.llm)
+        return Agent(config=self.agents_config["conclusion_agent"], llm=self.llm) # type: ignore
 
     # -------- Tasks --------
     @task
     def fundamental_task(self) -> Task:
-        return Task(config=self.tasks_config["fundamental_task"])
+        return Task(config=self.tasks_config["fundamental_task"]) # type: ignore
 
     @task
     def valuation_task(self) -> Task:
-        return Task(config=self.tasks_config["valuation_task"])
+        return Task(config=self.tasks_config["valuation_task"]) # type: ignore
 
     @task
     def sentiment_task(self) -> Task:
-        return Task(config=self.tasks_config["sentiment_task"])
+        return Task(config=self.tasks_config["sentiment_task"]) # type: ignore
 
     @task
     def investment_debate_task(self) -> Task:
-        return Task(config=self.tasks_config["investment_debate_task"])
+        return Task(config=self.tasks_config["investment_debate_task"]) # type: ignore
 
     @task
     def investment_conclusion_task(self) -> Task:
-        return Task(config=self.tasks_config["investment_conclusion_task"])
+        return Task(config=self.tasks_config["investment_conclusion_task"]) # type: ignore
 
     @crew
     def crew(self) -> Crew:
         """Creates the full investment crew"""
         return Crew(
-            agents=self.agents,
+            agents=self.agents, # type: ignore
             tasks=self.tasks,
             process=Process.sequential,
             verbose=True,
