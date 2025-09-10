@@ -17,7 +17,7 @@ llm = LLM(model="openai/gpt-5-mini", stop=["END"], seed=42)
 # Tools
 # ------------------------
 def get_tavily_search(stock="reliance"):
-    tavily_client = TavilyClient(api_key="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")
+    tavily_client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
     response = tavily_client.search(
         f"{stock} news",
         max_results=3,
