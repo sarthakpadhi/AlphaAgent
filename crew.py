@@ -19,7 +19,7 @@ from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-from typing import Type
+from typing import Type, Optional
 import logging
 
 logging.basicConfig(level=logging.WARNING)  # root logger
@@ -87,11 +87,17 @@ class MyToolInput(BaseModel):
         description="the query to the vector store that gets you relevant information",
     )
 
+# Lazy initialization - ChromaRAG will be initialized only when first needed
+_chromarag: Optional[SemanticChromaRAG] = None
 
-logger.info("Starting to extract docs....")
-chromarag = SemanticChromaRAG(docs_path="assets/rag_assets/")
-logger.info("DocsExtraction complete")
-
+def get_chromarag():
+    """Get or create the ChromaRAG instance (lazy initialization)"""
+    global _chromarag
+    if _chromarag is None:
+        print("Initializing ChromaRAG...")
+        _chromarag = SemanticChromaRAG(docs_path="assets/rag_assets/")
+        print("ChromaRAG initialization complete")
+    return _chromarag
 
 class CustomRagTool(BaseTool):
     name: str = "FundamentalRagTool"
@@ -101,6 +107,8 @@ class CustomRagTool(BaseTool):
     args_schema: Type[BaseModel] = MyToolInput
 
     def _run(self, argument: str) -> str:
+        # Get ChromaRAG instance only when the tool is actually used
+        chromarag = get_chromarag()
         results = chromarag.retriever.get_relevant_documents(argument)
         ans = ""
         for result in results:
@@ -143,7 +151,7 @@ def getAnnualisedVolatilityTool(*args, **kwargs) -> str:
     Args:
         stock (str): Stock ticker
     """
-    dat = yf.Ticker(f"{InvestmentCrew.stock}.NS")
+    dat = yf.Ticker(f"{InvestmentCrew.stock}")
     df = dat.history(period="3mo")
     log_returns = np.log(df["Close"] / df["Close "].shift(1))
     volatility = log_returns.std() * (252**0.5)
@@ -157,10 +165,11 @@ def getAnnualisedReturnTool(*args, **kwargs) -> float:
     Args:
         stock (str): Stock ticker
     """
-    dat = yf.Ticker(f"{InvestmentCrew.stock}.NS")
+    dat = yf.Ticker(f"{InvestmentCrew.stock}")
     df = dat.history(period="3mo")
     cummulative_return = (
-        float(df["close "].iloc[-1]) / float(df["close "].iloc[0])
+        float(df["Close "].iloc[-1])
+        / float(df["Close "].iloc[0])
     ) - 1
     annualised_return = (1 + cummulative_return) ** (252 / len(df)) - 1
     return annualised_return
@@ -170,7 +179,7 @@ def getAnnualisedReturnTool(*args, **kwargs) -> float:
 def fundamental_analysis_tool(*args, **kwargs):
     """Tool to analyze the BalanceSheet of a company and provide a summary"""
     # Get the stock balance sheet
-    dat = yf.Ticker(f"{InvestmentCrew.stock}.NS")
+    dat = yf.Ticker(f"{InvestmentCrew.stock}")
     balance_sheet_data = dat.balance_sheet
 
     # Create messages
@@ -200,7 +209,6 @@ class InvestmentCrew:
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
-    stock = "RELIANCE"
 
     llm = llm
 
@@ -227,7 +235,7 @@ class InvestmentCrew:
             config=self.agents_config["sentiment_analyst"],
             tools=[getNewsBodyTool],
             llm=self.llm,
-        )  # type: ignore
+        ) # type: ignore# type: ignore
 
     @agent
     def moderator(self) -> Agent:
