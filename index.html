@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AlphaAgent - BlackRock's AI Trading System</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -55,8 +58,15 @@
         }
 
         @keyframes backgroundShift {
-            0%, 100% { transform: scale(1) rotate(0deg); }
-            50% { transform: scale(1.1) rotate(5deg); }
+
+            0%,
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+
+            50% {
+                transform: scale(1.1) rotate(5deg);
+            }
         }
 
         .container {
@@ -78,6 +88,7 @@
                 opacity: 0;
                 transform: translateY(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -106,8 +117,15 @@
         }
 
         @keyframes subtle-float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
         }
 
         h1 {
@@ -144,6 +162,7 @@
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -451,8 +470,13 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         .spinner {
@@ -466,8 +490,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Toast notifications */
@@ -524,6 +553,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -533,8 +563,16 @@
                 </div>
                 <h1>AlphaAgent</h1>
             </div>
-            <p class="subtitle">Implementation of BlackRock's AlphaAgent Paper</p>
-        </div>
+        <p class="subtitle" style="color: #5a695e;">
+    Implementation of BlackRock's 
+    <a href="https://arxiv.org/abs/2508.11152" target="_blank" 
+       style="color: #5a695e; text-decoration: none;"
+       onmouseover="this.style.color='#dddddd';" 
+       onmouseout="this.style.color='#5a695e';">
+       AlphaAgent Paper 🔗
+    </a> 
+</p>
+</div>
 
         <div class="main-card">
             <div class="input-section">
@@ -542,12 +580,8 @@
                     <label for="stockInput">Stock Ticker Symbol</label>
                     <div class="stock-input-wrapper">
                         <span class="stock-icon">📊</span>
-                        <input 
-                            type="text" 
-                            id="stockInput" 
-                            placeholder="e.g., RELIANCE.NS, AAPL, GOOGL"
-                            autocomplete="off"
-                        >
+                        <input type="text" id="stockInput" placeholder="e.g., RELIANCE.NS, AAPL, GOOGL"
+                            autocomplete="off">
                     </div>
                     <p class="helper-text">Enter the stock symbol you want to analyze</p>
                 </div>
@@ -596,7 +630,7 @@
 
     <script>
         const API_URL = 'http://localhost:8000';
-        
+
         let currentJobId = null;
         let eventSource = null;
 
@@ -629,7 +663,7 @@
 
         // Drag and drop
         const fileUploadLabel = fileUploadWrapper.querySelector('.file-upload-label');
-        
+
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             fileUploadLabel.addEventListener(eventName, preventDefaults, false);
         });
@@ -656,7 +690,7 @@
         fileUploadLabel.addEventListener('drop', (e) => {
             const dt = e.dataTransfer;
             const files = dt.files;
-            
+
             if (files.length > 0) {
                 fileInput.files = files;
                 const event = new Event('change', { bubbles: true });
@@ -669,7 +703,7 @@
             toast.textContent = message;
             toast.className = `toast ${type}`;
             toast.classList.add('show');
-            
+
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
@@ -678,7 +712,7 @@
         // Analyze button click
         analyzeBtn.addEventListener('click', async () => {
             const stockTicker = stockInput.value.trim();
-            
+
             if (!stockTicker) {
                 showNotification('Please enter a stock ticker symbol', 'error');
                 stockInput.focus();
@@ -698,12 +732,12 @@
                     progressText.textContent = 'Uploading document...';
                     const formData = new FormData();
                     formData.append('file', fileInput.files[0]);
-                    
+
                     const uploadResponse = await fetch(`${API_URL}/api/upload-document`, {
                         method: 'POST',
                         body: formData
                     });
-                    
+
                     if (uploadResponse.ok) {
                         includeUploadedDocs = true;
                         showNotification('Document uploaded successfully', 'success');
@@ -735,7 +769,7 @@
 
                 // Start monitoring progress
                 monitorProgress(currentJobId);
-                
+
             } catch (error) {
                 console.error('Error:', error);
                 showNotification('Failed to start analysis. Please try again.', 'error');
@@ -754,10 +788,10 @@
 
             // Use Server-Sent Events for real-time updates
             eventSource = new EventSource(`${API_URL}/api/analysis-stream/${jobId}`);
-            
+
             eventSource.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                
+
                 if (data.error) {
                     console.error('Error:', data.error);
                     eventSource.close();
@@ -793,7 +827,7 @@
             eventSource.onerror = (error) => {
                 console.error('EventSource error:', error);
                 eventSource.close();
-                
+
                 // Fallback to polling
                 pollStatus(jobId);
             };
@@ -805,7 +839,7 @@
                 try {
                     const response = await fetch(`${API_URL}/api/analysis-status/${jobId}`);
                     const data = await response.json();
-                    
+
                     progressBar.style.width = `${data.progress}%`;
                     progressText.textContent = data.message;
 
@@ -837,14 +871,14 @@
         // Display results
         function displayResults(result) {
             resultsSection.classList.add('active');
-            
+
             if (!result) {
                 resultsContent.innerHTML = '<p>No results available</p>';
                 return;
             }
 
             let html = '';
-            
+
             // Display summary
             if (result.summary) {
                 html += `
@@ -884,15 +918,15 @@
             try {
                 const response = await fetch(`${API_URL}/api/recent-analyses`);
                 const analyses = await response.json();
-                
+
                 if (analyses.length > 0) {
                     recentAnalyses.style.display = 'block';
-                    
+
                     let html = '';
                     analyses.forEach(analysis => {
                         const date = new Date(analysis.created_at).toLocaleString();
                         const statusClass = `status-${analysis.status}`;
-                        
+
                         html += `
                             <li class="recent-item">
                                 <div class="recent-item-info">
@@ -903,7 +937,7 @@
                             </li>
                         `;
                     });
-                    
+
                     recentList.innerHTML = html;
                 }
             } catch (error) {
@@ -920,4 +954,5 @@
         stockInput.focus();
     </script>
 </body>
+
 </html>

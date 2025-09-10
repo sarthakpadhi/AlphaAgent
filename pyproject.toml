@@ -12,6 +12,7 @@ dependencies = [
     "langchain-experimental>=0.3.4",
     "langchain-openai>=0.3.33",
     "pypdf>=6.0.0",
+    "python-multipart>=0.0.20",
     "streamlit>=1.49.1",
     "yfinance>=0.2.65",
 ]

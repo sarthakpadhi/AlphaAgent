@@ -20,7 +20,7 @@ fundamental_task:
 
 valuation_task:
   description: >
-    Analyze Reliance stock's historical performance by calculating
+    Analyze stock's historical performance by calculating
     annualized returns and volatility. Assess risk-adjusted performance
     and provide a clear BUY, SELL, or HOLD recommendation with detailed
     reasoning.
@@ -34,7 +34,7 @@ valuation_task:
 
 sentiment_task:
   description: >
-    Analyze recent news articles about Reliance to gauge overall market
+    Analyze recent news articles about given stock to gauge overall market
     sentiment. Review the content for positive or negative indicators of
     company performance, management decisions, and future prospects.
     Provide a sentiment-driven investment recommendation.
