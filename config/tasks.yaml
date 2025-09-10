@@ -1,0 +1,75 @@
+
+fundamental_task:
+  description: >
+    Analyze the company's Financial report using the fundamental analysis tool.
+    Extract key financial information such as revenue trends, profitability
+    metrics, debt levels, cash flow statements, segment performance, and
+    risk factors. Use natural language queries to interact with the tool
+    and gather comprehensive data from the XML document. Ensure all
+    necessary financial data points are retrieved before formulating the
+    investment recommendation.
+  expected_output: >
+    A comprehensive fundamental analysis report including:
+      1) Key financial metrics extracted from the Financial (revenue, net income, EPS, debt-to-equity ratio),
+      2) Year-over-year growth trends and performance analysis,
+      3) Segment-wise business performance breakdown,
+      4) Critical risk factors and their potential impact,
+      5) Cash flow analysis and liquidity position,
+      6) Final BUY/SELL/HOLD recommendation supported by specific data points.
+  agent: fundamental_analyst
+
+valuation_task:
+  description: >
+    Analyze Reliance stock's historical performance by calculating
+    annualized returns and volatility. Assess risk-adjusted performance
+    and provide a clear BUY, SELL, or HOLD recommendation with detailed
+    reasoning.
+  expected_output: >
+    A comprehensive valuation report including:
+      1) Annualized return percentage,
+      2) Annualized volatility percentage,
+      3) Risk-return analysis,
+      4) Final BUY/SELL/HOLD recommendation with justification.
+  agent: valuation_analyst
+
+sentiment_task:
+  description: >
+    Analyze recent news articles about Reliance to gauge overall market
+    sentiment. Review the content for positive or negative indicators of
+    company performance, management decisions, and future prospects.
+    Provide a sentiment-driven investment recommendation.
+  expected_output: >
+    A sentiment analysis report including:
+      1) Summary of key news themes,
+      2) Overall sentiment assessment (positive/negative/neutral),
+      3) Key risks or opportunities identified,
+      4) Final BUY/SELL/HOLD recommendation based on sentiment.
+  agent: sentiment_analyst
+
+investment_debate_task:
+  description: >
+    Moderate a structured debate between the Sentiment Analyst and
+    Valuation Analyst. Each analyst independently proposes a BUY, SELL,
+    or HOLD position, defends their reasoning, challenges opposing views,
+    and responds to critiques. Ensure each analyst has at least two turns
+    to speak. The goal is to highlight the strengths and weaknesses of
+    each position and move toward a consensus recommendation.
+  expected_output: >
+    A transcript of the investment debate including:
+      - Clear BUY/SELL/HOLD positions from each analyst,
+      - Supporting reasoning, challenges, and responses.
+  context: [valuation_task, sentiment_task, fundamental_task]
+  agent: moderator
+
+investment_conclusion_task:
+  description: >
+    After the debate, carefully evaluate the discussion and provide a
+    final investment decision. Summarize the strongest arguments and
+    declare a clear BUY, SELL, or HOLD recommendation supported by the
+    most compelling evidence.
+  expected_output: >
+    A clear and reasoned final investment decision (BUY/SELL/HOLD),
+    summarizing the debate and highlighting which analytical approach was
+    most persuasive.
+  context: [investment_debate_task]
+  agent: conclusion_agent
