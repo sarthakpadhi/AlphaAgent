@@ -1,0 +1,44 @@
+fundamental_task:
+  description: >
+    Analyze 10K report of a company to provide a fundamental analysis report. Use the tool at your disposal to extract relevant information from the 10K. Provide a clear BUY, SELL, or HOLD recommendation with detailed reasoning.
+  expected_output: >
+    A comprehensive fundamental analysis report including: 1) Key financial metrics extracted from the 10K (revenue, net income, EPS, debt-to-equity ratio), 2) Year-over-year growth trends and financial performance analysis, 3) Segment-wise business performance breakdown, 4) Critical risk factors and their potential impact, 5) Cash flow analysis and liquidity position, 6) Final BUY/SELL/HOLD recommendation supported by specific data points from the 10K report.
+  agent: fundamentalAgent
+
+valuation_task:
+  description: >
+    Analyze  stock's historical performance by calculating annualized returns and volatility. Use both metrics to assess risk-adjusted performance and provide a clear BUY, SELL, or HOLD recommendation with detailed reasoning.
+  expected_output: >
+    A comprehensive valuation report including: 1) Annualized return percentage, 2) Annualized volatility percentage, 3) Risk-return analysis, 4) Final BUY/SELL/HOLD recommendation with justification based on the metrics.
+  agent: valuationAgent
+
+sentiment_task:
+  description: >
+    Analyze recent news articles about  to gauge market sentiment. Review the news content for positive or negative indicators about the company's performance, management decisions, and future prospects. Provide a sentiment-based investment recommendation.
+  expected_output: >
+    A sentiment analysis report including: 1) Summary of key news themes, 2) Overall sentiment assessment (positive/negative/neutral), 3) Key risks or opportunities identified, 4) Final BUY/SELL/HOLD recommendation based on news sentiment.
+  agent: sentimentAgent
+
+investment_debate_task:
+  description: >
+    "use all the context available to you to moderate a debate between 2 investment agents given to you Sentiment Agent and Valuation Agent. "
+    "Start a structured debate between the three investment analysts. "
+    "Each agent should independently propose whether the stock should be a BUY, SELL, or HOLD. "
+    "They must defend their recommendation with reasoning, challenge opposing recommendations, "
+    "and respond to critiques. Ensure each analyst has at least 2 turns to speak. "
+    "The goal is for the analysts to debate the merits of each position and work toward a consensus "
+    "on the final investment recommendation."
+  expected_output: >
+    "A transcript of the investment debate with clear BUY/SELL/HOLD positions from each analyst, "
+    "including reasoning, challenges, and responses."
+  agent: moderator
+
+investment_conclusion_task:
+  description: >
+    "After the debate, analyze the discussion carefully and provide a final investment decision. "
+    "The conclusion should summarize key arguments and declare the final recommendation: BUY, SELL, or HOLD "
+    "with proper reasoning based on the strongest arguments presented."
+  expected_output: >
+    "A clear and reasoned final investment decision (BUY/SELL/HOLD) summarizing the debate "
+    "and identifying which analytical approach provided the most compelling case."
+  agent: conclusion_agent
