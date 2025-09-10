@@ -14,8 +14,9 @@ def run():
     """
     Run the crew.
     """
+    InvestmentCrew.stock = "RELIANCE"
     inputs = {
-        'topic': 'AI LLMs'
+        'topic': f'give me report for {InvestmentCrew.stock}',
     }
     InvestmentCrew().crew().kickoff(inputs=inputs)
 
