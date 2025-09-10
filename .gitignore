@@ -1,0 +1,15 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+notebooks/
+
+.venv
+.env
+.coding
+.python-version
+chroma_db
+
