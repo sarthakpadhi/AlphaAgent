@@ -9,13 +9,18 @@ import numpy as np
 from openai import OpenAI
 
 llm = LLM(
-    model="openai/gpt-5-mini", # call model by provider/model_name
+    model="openai/gpt-5-mini", 
     stop=["END"],
     seed=42
-) # type: ignore
+) 
 
 
 class AgentPrompts(Enum):
+    """
+    This class contains backstories and prompts for all the agents defined in code
+    """
+
+
     fundamentalAgentBackStory = """As a fundamental financial equity
 analyst your primary responsibility is to analyze the most
 recent 10K report provided for a company. You have access to a
@@ -30,14 +35,16 @@ have answered the users’ question to avoid looping"""
     fundamentalAgentGoal = """To come up with position for a stock based on fundamental analysis. I will use the tools at your disposal to help formulate a final position"""
 
     valuationAgentBackStory = """As a valuation equity analyst, your primary responsibility is to analyze the valuation trends of a given asset or portfolio over an extended time horizon. To complete the task, you must analyze the historical valuation data of the asset or portfolio provided, 
-    identify trends and patterns in valuation metrics over time, and interpret the implications of these trends for investors or stakeholders."""
+        identify trends and patterns in valuation metrics over time, and interpret the implications of these trends for investors or stakeholders."""
 
     valuationAgentGoal = """To come up with position for a stock based on returns and volatility analysis. I will use the tools at your disposal to help formulate a final positiom"""
 
+
     sentimentAgentBackStory = """As a sentiment equity analyst your primary responsibility is to analyze the financial news, analyst
-ratings and disclosures related to the underlying security;
-and analyze its implication and sentiment for investors or
-stakeholders"""
+        ratings and disclosures related to the underlying security;
+        and analyze its implication and sentiment for investors or
+        stakeholders"""
+
     sentimentAgentGoal = """ To come up with position for a stock based on sentiment analysis. I will use the tools at your disposal to help formulate a final position"""
 
 
@@ -45,6 +52,9 @@ stakeholders"""
 
 
 def get_tavily_search(stock = "reliance"):
+    '''
+        Get the tavily search results for a company
+    '''
     tavily_client = TavilyClient(api_key="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")
     response = tavily_client.search("reliance news", max_results=3, topic="finance", search_depth="advanced", country="india", include_raw_content="markdown")
     return response['results']
@@ -55,8 +65,9 @@ def get_tavily_search(stock = "reliance"):
 @tool 
 def getNewsBodyTool(*args, **kwargs) -> list:
     '''
-        Get the news body for a company
+        Get the news from tavily search and return only the revelant news with score > 0.6
     '''
+
     news_list = get_tavily_search("reliance")
     final_news_content = []
 
@@ -235,11 +246,8 @@ crew = Crew(
     agents=[valuationAgent, sentimentAgent,fundamentalAgent, moderator, conclusion_agent],
     tasks=[ valuation_task,sentiment_task,fundamental_task,investment_debate_task, investment_conclusion_task],
     process=Process.sequential,
-) # type: ignore
+) 
 
-# ------------------------
-# Run Investment Debate
-# ------------------------
 
 result = crew.kickoff()
 print("Final Investment Strategy Decision:\n", result)
