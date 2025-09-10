@@ -7,4 +7,5 @@ requires-python = ">=3.13"
 dependencies = [
     "crewai>=0.177.0",
     "pandas>=2.3.2",
+    "yfinance>=0.2.65",
 ]

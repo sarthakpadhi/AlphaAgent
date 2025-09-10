@@ -1,26 +1,102 @@
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
-from crewai.tools import tool
-from crewai_tools import PDFSearchTool
+from crewai.tools import tool, BaseTool
+from langchain_openai.chat_models import ChatOpenAI
+from langchain.schema import SystemMessage, HumanMessage
+import yfinance as yf
+import os
 
 from tavily import TavilyClient
-from openai import OpenAI
 import pandas as pd
 import numpy as np
 import os
 import yfinance as yf
+from crewai.tools import tool
+from langchain_community.vectorstores import Chroma
+from langchain_openai import OpenAI, OpenAIEmbeddings
+from langchain_experimental.text_splitter import SemanticChunker
+from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
+
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+from typing import Type
+from logging import Logger
+
 
 # ------------------------
 # LLMs
 llm = LLM(model="openai/gpt-5-mini", stop=["END"], seed=42)
-
-
+embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
+openai_llm = OpenAI(model="gpt-5-mini")
+client = ChatOpenAI(
+        model_name="gpt-5-nano",
+        openai_api_key=os.environ.get("OPENAI_API_KEY"),
+        temperature=0  # ensures deterministic outputs
+    )
 
 
 # ------------------------
 # Tools
 # ------------------------
-def get_tavily_search():
+
+class SemanticChromaRAG:
+    def __init__(self, docs_path: str, persist_directory: str = "./chroma_db"):
+        loader = DirectoryLoader(docs_path, glob="**/*.pdf", loader_cls=PyPDFLoader)
+        documents = loader.load()
+        print(f"Loaded {len(documents)} documents.")
+    
+        semantic_chunker = SemanticChunker(
+            embeddings=embeddings,
+            breakpoint_threshold_type="percentile", 
+        )
+        semantic_chunks = semantic_chunker.create_documents(
+            [d.page_content for d in documents]
+        )
+        print(f"Created {len(semantic_chunks)} semantic chunks.")
+
+        self.vectordb = Chroma.from_documents(
+            semantic_chunks, embedding=embeddings, persist_directory=persist_directory
+        )
+        self.vectordb.persist()
+
+
+        self.retriever = self.vectordb.as_retriever(
+            search_type= "mmr",
+            search_kwargs={
+                "k": 3,
+                "search_type": "mmr",
+                    "fetch_k": 10,  
+                    "lambda_mult": 0.5,  
+            }
+        )
+        self.qa_chain = self.retriever | openai_llm
+
+    def query(self, text: str):
+        """Run a query over the semantic chunks using the QA chain."""
+        return self.qa_chain.invoke(text)
+
+
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="the query to the vector store that gets you relevant information")
+
+Logger.info("Starting to extract docs....")
+chromarag = SemanticChromaRAG(docs_path="assets/rag_assets/")
+Logger.info("DocsExtraction complete")
+
+class CustomRagTool(BaseTool):
+    name: str = "FundamentalRagTool"
+    description: str = "this is a custom RAG tool that you can use to solve fundamental questions use this to solve non balance sheet related questions."
+    args_schema: Type[BaseModel] = MyToolInput
+    
+    def _run(self, argument: str) -> str:
+        results = chromarag.retriever.get_relevant_documents(argument)
+        ans = ''
+        for result in results:
+            ans += result.page_content
+        return ans
+
+def get_tavily_search(*args, **kwargs):
     tavily_client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
     response = tavily_client.search(
         f"{InvestmentCrew.stock} news",
@@ -34,7 +110,7 @@ def get_tavily_search():
 
 
 @tool
-def getNewsBodyTool() -> list:
+def getNewsBodyTool(*args, **kwargs) -> list:
 
     """
     Get the news body for a company
@@ -50,14 +126,13 @@ def getNewsBodyTool() -> list:
 
 
 @tool
-def getAnnualisedVolatilityTool() -> str:
+def getAnnualisedVolatilityTool(*args, **kwargs) -> str:
 
     """
     Get the annualised volatility for a company
     Args:
         stock (str): Stock ticker 
     """
-    # df = pd.read_csv("assets/Quote-Equity-RELIANCE-EQ-08-09-2024-to-08-09-2025.csv")
     dat = yf.Ticker(f"{InvestmentCrew.stock}.NS")
     df = dat.history(period="3mo")
     log_returns = np.log(df["Close"] / df["Close "].shift(1))
@@ -66,7 +141,7 @@ def getAnnualisedVolatilityTool() -> str:
 
 
 @tool
-def getAnnualisedReturnTool() -> float:
+def getAnnualisedReturnTool(*args, **kwargs) -> float:
 
     """
     Get the annualised return for a company
@@ -84,29 +159,27 @@ def getAnnualisedReturnTool() -> float:
 
 
 @tool
-def fundamental_analysis_tool():
-    """Tool to analyze the financial report of a company and provide a summary"""
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+def fundamental_analysis_tool(*args, **kwargs):
+    """Tool to analyze the BalanceSheet of a company and provide a summary"""
+    # Get the stock balance sheet
     dat = yf.Ticker(f"{InvestmentCrew.stock}.NS")
     balance_sheet_data = dat.balance_sheet
 
-    response = client.chat.completions.create(
-        model="gpt-5-nano",
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a financial analyst. Provide correct answers only. If you don't know, say so.",
-            },
-            {
-                "role": "user",
-                "content": f"Here is an Pandas Dataframe:\n{balance_sheet_data}\n\nSummarize the financial results in INR. Don't ask for anything else.",
-            },
-        ],
-    )
-    return response.choices[0].message.content
+    # Create messages
+    messages = [
+        SystemMessage(content="You are a financial analyst. Provide correct answers only. If you don't know, say so."),
+        HumanMessage(content=f"Here is a Pandas DataFrame:\n{balance_sheet_data}\n\nSummarize the financial results in INR. Don't ask for anything else.")
+    ]
+
+    # Get response
+    response = client(messages)
+
+    # Access content
+    summary = response.content
+    return summary
 
 
-RAGtool = PDFSearchTool(pdf='assets/25042025_Media_Release_RIL_Q4_FY2024_25_Financial_and_Operational_Performance.pdf')
+
 
 # ------------------------
 # CrewBase Class
@@ -118,7 +191,7 @@ class InvestmentCrew:
 
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
-    stock ="RELIANCE"  # default stock
+    stock ="RELIANCE"  
 
     llm = llm
     
@@ -128,7 +201,7 @@ class InvestmentCrew:
     def fundamental_analyst(self) -> Agent:
         return Agent(
             config=self.agents_config["fundamental_analyst"],
-            tools=[RAGtool],
+            tools=[CustomRagTool(), fundamental_analysis_tool],
             llm=self.llm,
         )
 
@@ -138,7 +211,7 @@ class InvestmentCrew:
             config=self.agents_config["valuation_analyst"],
             tools=[getAnnualisedVolatilityTool, getAnnualisedReturnTool],
             llm=self.llm,
-        ) # type: ignore
+        )
 
     @agent
     def sentiment_analyst(self) -> Agent:
