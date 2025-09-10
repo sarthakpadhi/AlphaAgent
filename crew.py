@@ -20,7 +20,10 @@ from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 from typing import Type
-from logging import Logger
+import logging
+
+logging.basicConfig(level=logging.WARNING)  # root logger
+logger = logging.getLogger(__name__)
 
 
 # ------------------------
@@ -80,9 +83,9 @@ class MyToolInput(BaseModel):
     """Input schema for MyCustomTool."""
     argument: str = Field(..., description="the query to the vector store that gets you relevant information")
 
-Logger.info("Starting to extract docs....")
+logger.info("Starting to extract docs....")
 chromarag = SemanticChromaRAG(docs_path="assets/rag_assets/")
-Logger.info("DocsExtraction complete")
+logger.info("DocsExtraction complete")
 
 class CustomRagTool(BaseTool):
     name: str = "FundamentalRagTool"
@@ -219,7 +222,6 @@ class InvestmentCrew:
             config=self.agents_config["sentiment_analyst"],
             tools=[getNewsBodyTool],
             llm=self.llm,
-        ) # type: ignore
         ) # type: ignore
 
     @agent
