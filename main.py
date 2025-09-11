@@ -1,52 +1,56 @@
 import sys
 import warnings
+import argparse
+import os
 
 from crew import InvestmentCrew
 
-import streamlit as st
-import os
-
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
-# This main file is intended to be a way for you to run your
-# crew locally, so refrain from adding unnecessary logic into this file.
-# Replace with inputs you want to test with, it will automatically
-# interpolate any tasks and agents information
 
-def run():
+def run(stock: str):
     """
-    Run the crew.
+    Run the crew for a given stock.
     """
-    # InvestmentCrew.stock = "RELIANCE.NS"
     inputs = {
-        'topic': f'give me report for {InvestmentCrew.stock}',
+        'topic': f'give me report for {stock}',
     }
     return InvestmentCrew().crew().kickoff(inputs=inputs).raw
 
 
-st.set_page_config(page_title="AlphaAgent", page_icon=":robot:")
-st.title("AlphaAgents")
+def main():
+    parser = argparse.ArgumentParser(description="Run AlphaAgent for stock analysis.")
+    parser.add_argument(
+        "--stock",
+        type=str,
+        required=True,
+        help="Stock ticker symbol (e.g. RELIANCE.NS)"
+    )
+    parser.add_argument(
+        "--doc",
+        type=str,
+        help="Optional path to financial document (PDF, DOCX, TXT) for RAG"
+    )
 
-stock_input = st.text_input("Enter Stock Ticker")
+    args = parser.parse_args()
 
-financial_doc = st.file_uploader("Upload Your Financial Document (PDF, DOCX, TXT)", type=["pdf", "docx", "txt"])
-if financial_doc is not None:
-    filename = "uploadedfile_note.txt"
-    filepath = os.path.join("assets/rag_assets", filename)
-    with open(filepath, 'w') as f:
-        f.write(financial_doc.getvalue().decode("utf-8"))
+    # Set stock
+    InvestmentCrew.stock = args.stock
 
-    st.success("Document uploaded successfully!")
+    # Handle document if provided
+    if args.doc:
+        filename = "uploadedfile_note.txt"
+        filepath = os.path.join("assets/rag_assets", filename)
 
-button = st.button("Analyze")
+        with open(args.doc, "rb") as f_in, open(filepath, "wb") as f_out:
+            f_out.write(f_in.read())
 
-if button:
-    if stock_input:
-        InvestmentCrew.stock = stock_input
-        with st.spinner("Analyzing..."):
-            st.markdown(f"""### Analyzing Stock Ticker: {InvestmentCrew.stock}
-### Report: 
-                        {run()}""")
+        print(f"✅ Document {args.doc} saved to {filepath}")
 
-    else:
-        st.error("Please enter a stock ticker.")
+    print(f"\n📊 Analyzing Stock Ticker: {args.stock}\n")
+    print("### Report:\n")
+    print(run(args.stock))
+
+
+if __name__ == "__main__":
+    main()
