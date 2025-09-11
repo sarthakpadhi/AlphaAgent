@@ -1,4 +1,4 @@
-# AlphAgent
+# AlphaAgent
 An implementation of the AlphaAgent paper published by BlackRock. 
 Instead of AutoGen for orchestrating debates which is used in the original paper, we used crewAI as it is easier to onboard new Agents.
 https://arxiv.org/abs/2508.11152
