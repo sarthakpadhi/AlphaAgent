@@ -65,14 +65,9 @@ Tasks define the workflow and expected outputs for each analysis phase.
 ### Running with UV
 ```bash
 # Activate the virtual environment
-uv run python main.py
+uv run python main.py --stock <ticker> --doc </path/to/your/pdfdocs>
 ```
-
-### Customizing Stock Analysis
-```python
-# Change the stock symbol
-InvestmentCrew.stock = "TCS"  # or any other NSE stock
-```
+Alternatively, you can directly put multiple docs in the "assets/rag_assets" folder
 
 ## 📊 Analysis Workflow
 
