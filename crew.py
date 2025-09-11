@@ -1,6 +1,6 @@
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
-from crewai.tools import tool, BaseTool
+from crewai.tools import tool
 from langchain_openai.chat_models import ChatOpenAI
 from langchain.schema import SystemMessage, HumanMessage
 import yfinance as yf
@@ -9,18 +9,14 @@ import os
 from tavily import TavilyClient
 import pandas as pd
 import numpy as np
-import os
-import yfinance as yf
-from crewai.tools import tool
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAI, OpenAIEmbeddings
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 
-from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
-from typing import Type, Optional
+from typing import Optional
 import logging
+from pathlib import Path
 
 logging.basicConfig(level=logging.WARNING)  # root logger
 logger = logging.getLogger(__name__)
@@ -28,11 +24,11 @@ logger = logging.getLogger(__name__)
 
 # ------------------------
 # LLMs
-llm = LLM(model="openai/gpt-5-mini", stop=["END"], seed=42)
+llm = LLM(model="openai/gpt-4o-mini", stop=["END"], seed=42)
 embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
-openai_llm = OpenAI(model="gpt-5-mini")
+openai_llm = OpenAI(model="gpt-4o-mini")
 client = ChatOpenAI(
-    model_name="gpt-5-nano",
+    model_name="gpt-4o-mini",
     openai_api_key=os.environ.get("OPENAI_API_KEY"),
     temperature=0,  # ensures deterministic outputs
 )
@@ -79,47 +75,59 @@ class SemanticChromaRAG:
         return self.qa_chain.invoke(text)
 
 
-class MyToolInput(BaseModel):
-    """Input schema for MyCustomTool."""
-
-    argument: str = Field(
-        ...,
-        description="the query to the vector store that gets you relevant information",
-    )
-
 # Lazy initialization - ChromaRAG will be initialized only when first needed
 _chromarag: Optional[SemanticChromaRAG] = None
 
-def get_chromarag():
+def get_chromarag(force_reinit: bool = False):
     """Get or create the ChromaRAG instance (lazy initialization)"""
     global _chromarag
-    if _chromarag is None:
+    
+    # Check if there are any documents in the directory
+    docs_path = Path("assets/rag_assets/")
+    if not docs_path.exists():
+        print("No documents directory found")
+        return None
+    
+    pdf_files = list(docs_path.glob("**/*.pdf"))
+    if not pdf_files:
+        print("No PDF documents found in assets/rag_assets/")
+        return None
+    
+    if _chromarag is None or force_reinit:
         print("Initializing ChromaRAG...")
         _chromarag = SemanticChromaRAG(docs_path="assets/rag_assets/")
         print("ChromaRAG initialization complete")
     return _chromarag
 
-class CustomRagTool(BaseTool):
-    name: str = "FundamentalRagTool"
-    description: str = (
-        "this is a custom RAG tool that you can use to solve fundamental questions use this to solve non balance sheet related questions."
-    )
-    args_schema: Type[BaseModel] = MyToolInput
 
-    def _run(self, argument: str) -> str:
-        # Get ChromaRAG instance only when the tool is actually used
-        chromarag = get_chromarag()
-        results = chromarag.retriever.get_relevant_documents(argument)
+@tool
+def CustomRagTool(query: str) -> str:
+    """
+    Custom RAG tool to solve fundamental questions using uploaded documents.
+    Use this for non balance sheet related questions.
+    
+    Args:
+        query: The query to search in the vector store
+    """
+    # Get ChromaRAG instance only when the tool is actually used
+    chromarag = get_chromarag()
+    if chromarag is None:
+        return "No documents available for analysis. Please upload documents first."
+    
+    try:
+        results = chromarag.retriever.get_relevant_documents(query)
         ans = ""
         for result in results:
             ans += result.page_content
-        return ans
+        return ans if ans else "No relevant information found in documents."
+    except Exception as e:
+        return f"Error searching documents: {str(e)}"
 
 
-def get_tavily_search(*args, **kwargs):
+def get_tavily_search(stock_ticker, *args, **kwargs):
     tavily_client = TavilyClient(api_key=os.environ.get("TAVILY_API_KEY"))
     response = tavily_client.search(
-        f"{InvestmentCrew.stock} news",
+        f"{stock_ticker} news",
         max_results=3,
         topic="finance",
         search_depth="advanced",
@@ -136,7 +144,10 @@ def getNewsBodyTool(*args, **kwargs) -> list:
     args:
         stocks (str): Stock ticker
     """
-    news_list = get_tavily_search(InvestmentCrew.stock)
+    # Access the stock from the class variable
+    stock = InvestmentCrew.stock
+    print(f"[getNewsBodyTool] Using stock ticker: {stock}")
+    news_list = get_tavily_search(stock)
     final_news_content = []
     for news in news_list:
         if news["score"] > 0.6:
@@ -151,9 +162,12 @@ def getAnnualisedVolatilityTool(*args, **kwargs) -> str:
     Args:
         stock (str): Stock ticker
     """
-    dat = yf.Ticker(f"{InvestmentCrew.stock}")
+    # Access the stock from the class variable
+    stock = InvestmentCrew.stock
+    print(f"[getAnnualisedVolatilityTool] Using stock ticker: {stock}")
+    dat = yf.Ticker(f"{stock}")
     df = dat.history(period="3mo")
-    log_returns = np.log(df["Close"] / df["Close "].shift(1))
+    log_returns = np.log(df["Close"] / df["Close"].shift(1))
     volatility = log_returns.std() * (252**0.5)
     return volatility
 
@@ -165,11 +179,14 @@ def getAnnualisedReturnTool(*args, **kwargs) -> float:
     Args:
         stock (str): Stock ticker
     """
-    dat = yf.Ticker(f"{InvestmentCrew.stock}")
+    # Access the stock from the class variable
+    stock = InvestmentCrew.stock
+    print(f"[getAnnualisedReturnTool] Using stock ticker: {stock}")
+    dat = yf.Ticker(f"{stock}")
     df = dat.history(period="3mo")
     cummulative_return = (
-        float(df["Close "].iloc[-1])
-        / float(df["Close "].iloc[0])
+        float(df["Close"].iloc[-1])
+        / float(df["Close"].iloc[0])
     ) - 1
     annualised_return = (1 + cummulative_return) ** (252 / len(df)) - 1
     return annualised_return
@@ -178,8 +195,11 @@ def getAnnualisedReturnTool(*args, **kwargs) -> float:
 @tool
 def fundamental_analysis_tool(*args, **kwargs):
     """Tool to analyze the BalanceSheet of a company and provide a summary"""
+    # Access the stock from the class variable
+    stock = InvestmentCrew.stock
+    print(f"[fundamental_analysis_tool] Using stock ticker: {stock}")
     # Get the stock balance sheet
-    dat = yf.Ticker(f"{InvestmentCrew.stock}")
+    dat = yf.Ticker(f"{stock}")
     balance_sheet_data = dat.balance_sheet
 
     # Create messages
@@ -211,13 +231,15 @@ class InvestmentCrew:
     tasks_config = "config/tasks.yaml"
 
     llm = llm
+    stock = None  # This will be set dynamically
 
     # -------- Agents --------
     @agent
     def fundamental_analyst(self) -> Agent:
+        # Pass the tools as function references, not instances
         return Agent(
             config=self.agents_config["fundamental_analyst"],
-            tools=[CustomRagTool(), fundamental_analysis_tool],
+            tools=[CustomRagTool, fundamental_analysis_tool],
             llm=self.llm,
         )
 
@@ -227,7 +249,8 @@ class InvestmentCrew:
             config=self.agents_config["valuation_analyst"],
             tools=[getAnnualisedVolatilityTool, getAnnualisedReturnTool],
             llm=self.llm,
-        )  # type: ignore
+            max_retry_limit= 3,
+        )
 
     @agent
     def sentiment_analyst(self) -> Agent:
@@ -235,42 +258,42 @@ class InvestmentCrew:
             config=self.agents_config["sentiment_analyst"],
             tools=[getNewsBodyTool],
             llm=self.llm,
-        ) # type: ignore# type: ignore
+        )
 
     @agent
     def moderator(self) -> Agent:
-        return Agent(config=self.agents_config["moderator"], llm=self.llm)  # type: ignore
+        return Agent(config=self.agents_config["moderator"], llm=self.llm)
 
     @agent
     def conclusion_agent(self) -> Agent:
-        return Agent(config=self.agents_config["conclusion_agent"], llm=self.llm)  # type: ignore
+        return Agent(config=self.agents_config["conclusion_agent"], llm=self.llm)
 
     # -------- Tasks --------
     @task
     def fundamental_task(self) -> Task:
-        return Task(config=self.tasks_config["fundamental_task"])  # type: ignore
+        return Task(config=self.tasks_config["fundamental_task"])
 
     @task
     def valuation_task(self) -> Task:
-        return Task(config=self.tasks_config["valuation_task"])  # type: ignore
+        return Task(config=self.tasks_config["valuation_task"])
 
     @task
     def sentiment_task(self) -> Task:
-        return Task(config=self.tasks_config["sentiment_task"])  # type: ignore
+        return Task(config=self.tasks_config["sentiment_task"])
 
     @task
     def investment_debate_task(self) -> Task:
-        return Task(config=self.tasks_config["investment_debate_task"])  # type: ignore
+        return Task(config=self.tasks_config["investment_debate_task"])
 
     @task
     def investment_conclusion_task(self) -> Task:
-        return Task(config=self.tasks_config["investment_conclusion_task"])  # type: ignore
+        return Task(config=self.tasks_config["investment_conclusion_task"])
 
     @crew
     def crew(self) -> Crew:
         """Creates the full investment crew"""
         return Crew(
-            agents=self.agents,  # type: ignore
+            agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
             verbose=True,

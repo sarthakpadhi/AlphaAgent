@@ -76,8 +76,9 @@ async def upload_document(file: UploadFile = File(...)):
             with open(file_path, 'wb') as f:
                 f.write(content)
         
-        # Reinitialize ChromaDB with new document
-        get_chromarag(force_reinit=True)
+        # Reinitialize ChromaDB with new document (only if it's a PDF)
+        if file_extension == '.pdf':
+            get_chromarag(force_reinit=True)
         
         return {
             "success": True,
@@ -126,52 +127,58 @@ async def analyze_stock(request: StockAnalysisRequest, background_tasks: Backgro
 async def run_analysis(job_id: str, stock_ticker: str, include_uploaded_docs: bool):
     """Run the actual stock analysis"""
     try:
+        print(f"Starting analysis for {stock_ticker} (Job ID: {job_id})")
+        
         # Update status
         analysis_jobs[job_id]["status"] = "processing"
         analysis_jobs[job_id]["progress"] = 10
         analysis_jobs[job_id]["message"] = "Initializing analysis agents..."
         
-        # Set the stock ticker
-        InvestmentCrew.stock = stock_ticker
-        
         # Initialize ChromaDB if needed and documents are uploaded
         if include_uploaded_docs:
             analysis_jobs[job_id]["progress"] = 20
             analysis_jobs[job_id]["message"] = "Loading uploaded documents..."
-            get_chromarag()
+            chromarag = get_chromarag()
+            if chromarag is None:
+                analysis_jobs[job_id]["message"] = "No documents found, proceeding without document analysis..."
+                print("No documents found for ChromaDB")
         
-        # Prepare inputs
+        # Prepare inputs with the actual stock ticker
         inputs = {
             'topic': f'give me report for {stock_ticker}',
+            'stock': stock_ticker  # Pass the stock ticker explicitly
         }
+        print(f"Inputs prepared: {inputs}")
         
         # Update progress
         analysis_jobs[job_id]["progress"] = 30
         analysis_jobs[job_id]["message"] = "Starting fundamental analysis..."
+        print("Creating crew...")
+        
+        # Create an instance of InvestmentCrew and set the stock BEFORE creating crew
+        investment_crew = InvestmentCrew()
+        investment_crew.stock = stock_ticker
+        InvestmentCrew.stock = stock_ticker  # Also set the class variable
+        print(f"Stock ticker set to: {investment_crew.stock} (class: {InvestmentCrew.stock})")
         
         # Run the crew analysis
-        # Note: This is synchronous, you might want to make it async
-        crew = InvestmentCrew().crew()
+        crew = investment_crew.crew()
+        print("Crew created, starting kickoff...")
         
         analysis_jobs[job_id]["progress"] = 50
         analysis_jobs[job_id]["message"] = "Performing valuation analysis..."
         
         result = crew.kickoff(inputs=inputs)
+        print(f"Analysis complete. Result: {result}")
         
         analysis_jobs[job_id]["progress"] = 80
         analysis_jobs[job_id]["message"] = "Analyzing market sentiment..."
         
-        # Parse the result (adjust based on your actual output format)
+        # Parse the result - just return the summary
         analysis_result = {
             "stock_ticker": stock_ticker,
             "timestamp": datetime.now().isoformat(),
-            "summary": str(result),
-            "sections": {
-                "fundamental_analysis": "Fundamental analysis results...",
-                "valuation_metrics": "Valuation metrics...",
-                "sentiment_analysis": "Market sentiment...",
-                "investment_recommendation": "Investment recommendation..."
-            }
+            "summary": str(result)  # Just the summary, nothing else
         }
         
         # Update job status
@@ -179,8 +186,14 @@ async def run_analysis(job_id: str, stock_ticker: str, include_uploaded_docs: bo
         analysis_jobs[job_id]["progress"] = 100
         analysis_jobs[job_id]["message"] = "Analysis completed successfully"
         analysis_jobs[job_id]["result"] = analysis_result
+        print(f"Analysis completed successfully for {stock_ticker}")
         
     except Exception as e:
+        import traceback
+        detailed_error = traceback.format_exc()
+        print(f"ERROR in analysis for {stock_ticker}:")
+        print(detailed_error)
+        
         analysis_jobs[job_id]["status"] = "failed"
         analysis_jobs[job_id]["error"] = str(e)
         analysis_jobs[job_id]["message"] = f"Analysis failed: {str(e)}"
@@ -261,4 +274,5 @@ async def clear_documents():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))  # Use PORT env variable if available
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
